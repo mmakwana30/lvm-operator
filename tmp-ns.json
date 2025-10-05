@@ -1,0 +1,71 @@
+{
+    "apiVersion": "v1",
+    "kind": "Namespace",
+    "metadata": {
+        "annotations": {
+            "openshift.io/sa.scc.mcs": "s0:c27,c14",
+            "openshift.io/sa.scc.supplemental-groups": "1000730000/10000",
+            "openshift.io/sa.scc.uid-range": "1000730000/10000",
+            "security.openshift.io/MinimallySufficientPodSecurityStandard": "privileged",
+            "workload.openshift.io/allowed": "management"
+        },
+        "creationTimestamp": "2025-10-05T13:00:27Z",
+        "deletionTimestamp": "2025-10-05T13:10:10Z",
+        "labels": {
+            "kubernetes.io/metadata.name": "openshift-lvm-storage",
+            "pod-security.kubernetes.io/audit": "privileged",
+            "pod-security.kubernetes.io/audit-version": "latest",
+            "pod-security.kubernetes.io/warn": "privileged",
+            "pod-security.kubernetes.io/warn-version": "latest",
+            "security.openshift.io/scc.podSecurityLabelSync": "true"
+        },
+        "name": "openshift-lvm-storage",
+        "resourceVersion": "29539",
+        "uid": "05621272-60a5-4344-b07b-293c62cc83d8"
+    },
+    "spec": {
+        "finalizers": [
+            "kubernetes"
+        ]
+    },
+    "status": {
+        "conditions": [
+            {
+                "lastTransitionTime": "2025-10-05T13:10:15Z",
+                "message": "All resources successfully discovered",
+                "reason": "ResourcesDiscovered",
+                "status": "False",
+                "type": "NamespaceDeletionDiscoveryFailure"
+            },
+            {
+                "lastTransitionTime": "2025-10-05T13:10:15Z",
+                "message": "All legacy kube types successfully parsed",
+                "reason": "ParsedGroupVersions",
+                "status": "False",
+                "type": "NamespaceDeletionGroupVersionParsingFailure"
+            },
+            {
+                "lastTransitionTime": "2025-10-05T13:10:15Z",
+                "message": "All content successfully deleted, may be waiting on finalization",
+                "reason": "ContentDeleted",
+                "status": "False",
+                "type": "NamespaceDeletionContentFailure"
+            },
+            {
+                "lastTransitionTime": "2025-10-05T13:10:26Z",
+                "message": "Some resources are remaining: lvmvolumegroupnodestatuses.lvm.topolvm.io has 1 resource instances, lvmvolumegroups.lvm.topolvm.io has 1 resource instances",
+                "reason": "SomeResourcesRemain",
+                "status": "True",
+                "type": "NamespaceContentRemaining"
+            },
+            {
+                "lastTransitionTime": "2025-10-05T13:10:26Z",
+                "message": "Some content in the namespace has finalizers remaining: cleanup.vgmanager.node.topolvm.io/ip-10-0-27-231.us-east-2.compute.internal in 1 resource instances, delete-protection.lvm.openshift.io in 1 resource instances",
+                "reason": "SomeFinalizersRemain",
+                "status": "True",
+                "type": "NamespaceFinalizersRemaining"
+            }
+        ],
+        "phase": "Terminating"
+    }
+}

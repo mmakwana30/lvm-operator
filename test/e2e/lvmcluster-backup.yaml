@@ -1,0 +1,78 @@
+apiVersion: v1
+items:
+- apiVersion: lvm.topolvm.io/v1alpha1
+  kind: LVMCluster
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"lvm.topolvm.io/v1alpha1","kind":"LVMCluster","metadata":{"annotations":{},"creationTimestamp":"2025-10-05T16:12:04Z","finalizers":["lvmcluster.topolvm.io"],"generation":1,"name":"my-lvmcluster","namespace":"openshift-lvm-storage","resourceVersion":"60927","uid":"eeaad34a-1118-465d-8e41-ae53f6cbbb4e"},"spec":{"storage":{"deviceClasses":[{"default":true,"fstype":"xfs","name":"vg1","thinPoolConfig":{"chunkSizeCalculationPolicy":"Static","metadataSizeCalculationPolicy":"Host","name":"thin-pool-1","overprovisionRatio":10,"sizePercent":90}}]}},"status":{"conditions":[{"lastTransitionTime":"2025-10-05T16:13:15Z","message":"Reconciliation is complete and all the resources are available","reason":"ResourcesAvailable","status":"True","type":"ResourcesAvailable"},{"lastTransitionTime":"2025-10-05T16:13:15Z","message":"All the VGs are ready","reason":"VGsReady","status":"True","type":"VolumeGroupsReady"}],"deviceClassStatuses":[{"name":"vg1","nodeStatus":[{"deviceDiscoveryPolicy":"RuntimeDynamic","devices":["/dev/nvme1n1"],"excluded":[{"name":"/dev/loop0","reasons":["/dev/loop0 cannot be read-only","/dev/loop0 has an invalid filesystem signature (erofs) and cannot be used"]},{"name":"/dev/nvme0n1","reasons":["/dev/nvme0n1 has children block devices and could not be considered"]},{"name":"/dev/nvme0n1p1","reasons":["/dev/nvme0n1p1 has an invalid partition label \"BIOS-BOOT\""]},{"name":"/dev/nvme0n1p2","reasons":["/dev/nvme0n1p2 has an invalid filesystem signature (vfat) and cannot be used"]},{"name":"/dev/nvme0n1p3","reasons":["/dev/nvme0n1p3 has an invalid filesystem signature (ext4) and cannot be used","/dev/nvme0n1p3 has an invalid partition label \"boot\""]},{"name":"/dev/nvme0n1p4","reasons":["/dev/nvme0n1p4 has an invalid filesystem signature (xfs) and cannot be used"]}],"name":"vg1","node":"ip-10-0-27-231.us-east-2.compute.internal","status":"Ready"}]}],"ready":true,"state":"Ready"}}
+    creationTimestamp: "2025-10-05T16:13:42Z"
+    finalizers:
+    - lvmcluster.topolvm.io
+    generation: 1
+    name: my-lvmcluster
+    namespace: openshift-lvm-storage
+    resourceVersion: "61130"
+    uid: 3fab2de0-470e-4b2c-8ecc-5ee4c4bef2b0
+  spec:
+    storage:
+      deviceClasses:
+      - default: true
+        fstype: xfs
+        name: vg1
+        thinPoolConfig:
+          chunkSizeCalculationPolicy: Static
+          metadataSizeCalculationPolicy: Host
+          name: thin-pool-1
+          overprovisionRatio: 10
+          sizePercent: 90
+  status:
+    conditions:
+    - lastTransitionTime: "2025-10-05T16:14:05Z"
+      message: Reconciliation is complete and all the resources are available
+      reason: ResourcesAvailable
+      status: "True"
+      type: ResourcesAvailable
+    - lastTransitionTime: "2025-10-05T16:14:05Z"
+      message: All the VGs are ready
+      reason: VGsReady
+      status: "True"
+      type: VolumeGroupsReady
+    deviceClassStatuses:
+    - name: vg1
+      nodeStatus:
+      - deviceDiscoveryPolicy: RuntimeDynamic
+        devices:
+        - /dev/nvme1n1
+        excluded:
+        - name: /dev/loop0
+          reasons:
+          - /dev/loop0 cannot be read-only
+          - /dev/loop0 has an invalid filesystem signature (erofs) and cannot be used
+        - name: /dev/nvme0n1
+          reasons:
+          - /dev/nvme0n1 has children block devices and could not be considered
+        - name: /dev/nvme0n1p1
+          reasons:
+          - /dev/nvme0n1p1 has an invalid partition label "BIOS-BOOT"
+        - name: /dev/nvme0n1p2
+          reasons:
+          - /dev/nvme0n1p2 has an invalid filesystem signature (vfat) and cannot be
+            used
+        - name: /dev/nvme0n1p3
+          reasons:
+          - /dev/nvme0n1p3 has an invalid filesystem signature (ext4) and cannot be
+            used
+          - /dev/nvme0n1p3 has an invalid partition label "boot"
+        - name: /dev/nvme0n1p4
+          reasons:
+          - /dev/nvme0n1p4 has an invalid filesystem signature (xfs) and cannot be
+            used
+        name: vg1
+        node: ip-10-0-27-231.us-east-2.compute.internal
+        status: Ready
+    ready: true
+    state: Ready
+kind: List
+metadata:
+  resourceVersion: ""
