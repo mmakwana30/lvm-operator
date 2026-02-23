@@ -1,0 +1,29 @@
+[project]
+name = "mcp-lvm"
+version = "0.1.0"
+description = "MCP server for Linux LVM management"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp[cli]>=1.26.0",
+]
+
+[project.scripts]
+mcp-lvm = "mcp_lvm.server:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_lvm"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
