@@ -5037,6 +5037,216 @@ spec:
 		o.Expect(output2).To(o.ContainSubstring("new-data-after-restore"))
 		logf("Successfully read new data from restored volume\n")
 	})
+
+	g.It("Author:mmakwana-High-88799-[OTP][LVMS] Verify reclaimPolicy and volumeBindingMode combinations", g.Label("SNO", "MNO"), func() {
+
+		uniqueSuffix := fmt.Sprintf("%d", time.Now().UnixNano())
+		provisioner := "topolvm.io"
+
+		g.By("#. Create test namespace for OCP-88799")
+		testNs := fmt.Sprintf("lvms-test-88799-%s", uniqueSuffix[:10])
+		err := createNamespaceWithOC(testNs)
+		o.Expect(err).NotTo(o.HaveOccurred())
+		defer deleteSpecifiedResource("namespace", testNs, "")
+
+		g.By("Scenario A: reclaimPolicy=Delete, volumeBindingMode=Immediate")
+
+		g.By("#. Create StorageClass with reclaimPolicy=Delete and volumeBindingMode=Immediate")
+		scNameA := "lvms-88799-delete-immediate-" + uniqueSuffix[:8]
+		reclaimPolicyDelete := corev1.PersistentVolumeReclaimDelete
+		volumeBindingImmediate := storagev1.VolumeBindingImmediate
+		allowExpansion := true
+
+		scA := &storagev1.StorageClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: scNameA,
+			},
+			Provisioner: provisioner,
+			Parameters: map[string]string{
+				"csi.storage.k8s.io/fstype": "xfs",
+				"topolvm.io/device-class":   volumeGroup,
+			},
+			ReclaimPolicy:        &reclaimPolicyDelete,
+			AllowVolumeExpansion: &allowExpansion,
+			VolumeBindingMode:    &volumeBindingImmediate,
+		}
+		_, err = tc.Clientset.StorageV1().StorageClasses().Create(context.TODO(), scA, metav1.CreateOptions{})
+		o.Expect(err).NotTo(o.HaveOccurred())
+		logf("Created StorageClass %s with reclaimPolicy=Delete, volumeBindingMode=Immediate\n", scNameA)
+		defer tc.Clientset.StorageV1().StorageClasses().Delete(context.TODO(), scNameA, metav1.DeleteOptions{})
+
+		g.By("#. Create PVC with no pod (Scenario A)")
+		pvcNameA := "pvc-88799-scenario-a"
+		err = createPVCWithOC(pvcConfig{
+			name:             pvcNameA,
+			namespace:        testNs,
+			storageClassName: scNameA,
+			storage:          "1Gi",
+		})
+		o.Expect(err).NotTo(o.HaveOccurred())
+
+		g.By("#. Verify PVC is Bound immediately (no pod needed with Immediate binding)")
+		o.Eventually(func() corev1.PersistentVolumeClaimPhase {
+			pvcObj, err := tc.Clientset.CoreV1().PersistentVolumeClaims(testNs).Get(context.TODO(), pvcNameA, metav1.GetOptions{})
+			if err != nil {
+				return corev1.ClaimPending
+			}
+			return pvcObj.Status.Phase
+		}, PVCBoundTimeout, 5*time.Second).Should(o.Equal(corev1.ClaimBound))
+		logf("PVC %s is Bound immediately as expected\n", pvcNameA)
+
+		g.By("#. Note the PV name")
+		pvcObjA, err := tc.Clientset.CoreV1().PersistentVolumeClaims(testNs).Get(context.TODO(), pvcNameA, metav1.GetOptions{})
+		o.Expect(err).NotTo(o.HaveOccurred())
+		pvNameA := pvcObjA.Spec.VolumeName
+		o.Expect(pvNameA).NotTo(o.BeEmpty())
+		logf("PV name for Scenario A: %s\n", pvNameA)
+
+		g.By("#. Verify PV exists")
+		pvObjA, err := tc.Clientset.CoreV1().PersistentVolumes().Get(context.TODO(), pvNameA, metav1.GetOptions{})
+		o.Expect(err).NotTo(o.HaveOccurred())
+		o.Expect(pvObjA.Name).To(o.Equal(pvNameA))
+		logf("PV %s exists\n", pvNameA)
+
+		g.By("#. Delete PVC")
+		deleteSpecifiedResource("pvc", pvcNameA, testNs)
+		logf("PVC %s deleted\n", pvcNameA)
+
+		g.By("#. Verify PV is gone (reclaimPolicy=Delete)")
+		o.Eventually(func() bool {
+			_, err := tc.Clientset.CoreV1().PersistentVolumes().Get(context.TODO(), pvNameA, metav1.GetOptions{})
+			return err != nil
+		}, ResourceDeleteTimeout, 5*time.Second).Should(o.BeTrue())
+		logf("PV %s is gone as expected (reclaimPolicy=Delete)\n", pvNameA)
+
+		g.By("Scenario B: reclaimPolicy=Retain, volumeBindingMode=WaitForFirstConsumer")
+
+		g.By("#. Create StorageClass with reclaimPolicy=Retain and volumeBindingMode=WaitForFirstConsumer")
+		scNameB := "lvms-88799-retain-wffc-" + uniqueSuffix[:8]
+		reclaimPolicyRetain := corev1.PersistentVolumeReclaimRetain
+		volumeBindingWFFC := storagev1.VolumeBindingWaitForFirstConsumer
+
+		scB := &storagev1.StorageClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: scNameB,
+			},
+			Provisioner: provisioner,
+			Parameters: map[string]string{
+				"csi.storage.k8s.io/fstype": "xfs",
+				"topolvm.io/device-class":   volumeGroup,
+			},
+			ReclaimPolicy:        &reclaimPolicyRetain,
+			AllowVolumeExpansion: &allowExpansion,
+			VolumeBindingMode:    &volumeBindingWFFC,
+		}
+		_, err = tc.Clientset.StorageV1().StorageClasses().Create(context.TODO(), scB, metav1.CreateOptions{})
+		o.Expect(err).NotTo(o.HaveOccurred())
+		logf("Created StorageClass %s with reclaimPolicy=Retain, volumeBindingMode=WaitForFirstConsumer\n", scNameB)
+		defer tc.Clientset.StorageV1().StorageClasses().Delete(context.TODO(), scNameB, metav1.DeleteOptions{})
+
+		g.By("#. Create PVC with no pod (Scenario B)")
+		pvcNameB := "pvc-88799-scenario-b"
+		err = createPVCWithOC(pvcConfig{
+			name:             pvcNameB,
+			namespace:        testNs,
+			storageClassName: scNameB,
+			storage:          "1Gi",
+		})
+		o.Expect(err).NotTo(o.HaveOccurred())
+
+		g.By("#. Verify PVC is Pending (WaitForFirstConsumer requires a pod)")
+		time.Sleep(5 * time.Second)
+		pvcObjB, err := tc.Clientset.CoreV1().PersistentVolumeClaims(testNs).Get(context.TODO(), pvcNameB, metav1.GetOptions{})
+		o.Expect(err).NotTo(o.HaveOccurred())
+		o.Expect(pvcObjB.Status.Phase).To(o.Equal(corev1.ClaimPending))
+		logf("PVC %s is Pending as expected (WaitForFirstConsumer)\n", pvcNameB)
+
+		g.By("#. Create Pod with PVC")
+		podNameB := "pod-88799-scenario-b"
+		mountPath := "/mnt/test"
+		err = createPodWithOC(podConfig{
+			name:      podNameB,
+			namespace: testNs,
+			pvcName:   pvcNameB,
+			mountPath: mountPath,
+		})
+		o.Expect(err).NotTo(o.HaveOccurred())
+
+		g.By("#. Wait for PVC to be Bound (after pod creation)")
+		o.Eventually(func() corev1.PersistentVolumeClaimPhase {
+			pvcObj, err := tc.Clientset.CoreV1().PersistentVolumeClaims(testNs).Get(context.TODO(), pvcNameB, metav1.GetOptions{})
+			if err != nil {
+				return corev1.ClaimPending
+			}
+			return pvcObj.Status.Phase
+		}, PVCBoundTimeout, 5*time.Second).Should(o.Equal(corev1.ClaimBound))
+		logf("PVC %s is Bound after pod creation\n", pvcNameB)
+
+		g.By("#. Wait for Pod to be Running")
+		o.Eventually(func() corev1.PodPhase {
+			podObj, err := tc.Clientset.CoreV1().Pods(testNs).Get(context.TODO(), podNameB, metav1.GetOptions{})
+			if err != nil {
+				return corev1.PodPending
+			}
+			return podObj.Status.Phase
+		}, PodReadyTimeout, 5*time.Second).Should(o.Equal(corev1.PodRunning))
+		logf("Pod %s is Running\n", podNameB)
+
+		g.By("#. Note the PV name")
+		pvcObjB, err = tc.Clientset.CoreV1().PersistentVolumeClaims(testNs).Get(context.TODO(), pvcNameB, metav1.GetOptions{})
+		o.Expect(err).NotTo(o.HaveOccurred())
+		pvNameB := pvcObjB.Spec.VolumeName
+		o.Expect(pvNameB).NotTo(o.BeEmpty())
+		logf("PV name for Scenario B: %s\n", pvNameB)
+
+		g.By("#. Verify PV exists")
+		pvObjB, err := tc.Clientset.CoreV1().PersistentVolumes().Get(context.TODO(), pvNameB, metav1.GetOptions{})
+		o.Expect(err).NotTo(o.HaveOccurred())
+		o.Expect(pvObjB.Name).To(o.Equal(pvNameB))
+		logf("PV %s exists\n", pvNameB)
+
+		g.By("#. Delete Pod")
+		deleteSpecifiedResource("pod", podNameB, testNs)
+		logf("Pod %s deleted\n", podNameB)
+
+		g.By("#. Wait for Pod to be fully deleted")
+		o.Eventually(func() bool {
+			_, err := tc.Clientset.CoreV1().Pods(testNs).Get(context.TODO(), podNameB, metav1.GetOptions{})
+			return err != nil
+		}, ResourceDeleteTimeout, 5*time.Second).Should(o.BeTrue())
+
+		g.By("#. Delete PVC")
+		deleteSpecifiedResource("pvc", pvcNameB, testNs)
+		logf("PVC %s deleted\n", pvcNameB)
+
+		g.By("#. Wait for PVC to be fully deleted")
+		o.Eventually(func() bool {
+			_, err := tc.Clientset.CoreV1().PersistentVolumeClaims(testNs).Get(context.TODO(), pvcNameB, metav1.GetOptions{})
+			return err != nil
+		}, ResourceDeleteTimeout, 5*time.Second).Should(o.BeTrue())
+
+		g.By("#. Verify PV exists with status Released (reclaimPolicy=Retain)")
+		o.Eventually(func() corev1.PersistentVolumePhase {
+			pvObj, err := tc.Clientset.CoreV1().PersistentVolumes().Get(context.TODO(), pvNameB, metav1.GetOptions{})
+			if err != nil {
+				return ""
+			}
+			return pvObj.Status.Phase
+		}, ResourceDeleteTimeout, 5*time.Second).Should(o.Equal(corev1.VolumeReleased))
+		logf("PV %s exists with status Released as expected (reclaimPolicy=Retain)\n", pvNameB)
+
+		g.By("#. Delete orphaned PV")
+		err = tc.Clientset.CoreV1().PersistentVolumes().Delete(context.TODO(), pvNameB, metav1.DeleteOptions{})
+		o.Expect(err).NotTo(o.HaveOccurred())
+		logf("Orphaned PV %s deleted\n", pvNameB)
+
+		g.By("#. Verify orphaned PV is deleted")
+		o.Eventually(func() bool {
+			_, err := tc.Clientset.CoreV1().PersistentVolumes().Get(context.TODO(), pvNameB, metav1.GetOptions{})
+			return err != nil
+		}, ResourceDeleteTimeout, 5*time.Second).Should(o.BeTrue())
+		logf("PV %s is fully deleted\n", pvNameB)
+	})
 })
 
 func checkLvmsOperatorInstalled(tc *TestClient) {
